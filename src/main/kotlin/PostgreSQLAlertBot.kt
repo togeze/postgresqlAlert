@@ -11,15 +11,22 @@ import com.github.kotlintelegrambot.network.fold
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.sql.Connection
+import java.util.*
 
 private const val TOKEN = "6700628435:AAHH3o5EciDRrurO7s_jARQROJJqGHUx0nA"
 
 class PostgreSQLAlertBot(val isConnection: Boolean, val connect: Connection?) {
     private var chatId: ChatId.Id? = null
+    private val listChatId = mutableListOf<ChatId.Id>()
     private val isConnected = isConnection
     private val connection: Connection? = connect
 
+    fun getListChatId(): MutableList<ChatId.Id> {
+        return listChatId
+    }
     fun createBot(): Bot {
+
+
         return bot {
             token = TOKEN
             timeout = 30
@@ -40,25 +47,32 @@ class PostgreSQLAlertBot(val isConnection: Boolean, val connect: Connection?) {
     private fun Dispatcher.setUpCallbacks() {
         callbackQuery("state") {
             val chatId = callbackQuery.message?.chat?.id ?: return@callbackQuery
-            if(connection != null){
-                val query = "SELECT pid, state FROM pg_stat_activity"
+            if (connection != null) {
+                val query = "SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction'"
                 val statement = connection.createStatement()
                 val resultSet = statement.executeQuery(query)
+                val pid: String = "29576"
+
 
                 val listActivites = mutableListOf<String>()
+                var str: String = "Ошибок не найдено"
+                if (resultSet.next()) {
 
-                while (resultSet.next()) {
-                    val processId: Int = resultSet.getInt("pid")
-                    val state: String? = resultSet.getString("state")
-                    val str: String = "Process ID: $processId, State: $state"
-                    listActivites.add(str)
+                    val eresultSet = resultSet.getString("query")
+                    str = "Ошибка: $eresultSet"
+                    val query = "SELECT pg_terminate_backend($pid)"
+                    val statement = connection.createStatement()
+                    statement.execute(query)
+                    statement.close()
+
                 }
-
+                listActivites.add(str)
                 resultSet.close()
                 statement.close()
-                connection.close()
+            
+
                 bot.sendMessage(ChatId.fromId(chatId), listActivites.toString())
-            } else{
+            } else {
                 bot.sendMessage(ChatId.fromId(chatId), "Соединение отсутсвует")
             }
 
@@ -71,6 +85,7 @@ class PostgreSQLAlertBot(val isConnection: Boolean, val connect: Connection?) {
                 chatId = ChatId.fromId(update.message!!.chat.id),
                 text = "Привет, я бот способный отслеживать состояние баз данных и помогая устранять проблемы "
             )
+            listChatId.add(ChatId.fromId(update.message!!.chat.id))
             result.fold(
                 {
                     // do something here with the response
@@ -82,11 +97,13 @@ class PostgreSQLAlertBot(val isConnection: Boolean, val connect: Connection?) {
                             )
                         )
                     )
+
                     bot.sendMessage(
                         chatId = ChatId.fromId(message.chat.id),
                         text = "inline buttons",
                         replyMarkup = inlineKeyboardMarkup,
                     )
+
                 },
                 {
                     // do something with the error
@@ -94,6 +111,7 @@ class PostgreSQLAlertBot(val isConnection: Boolean, val connect: Connection?) {
             )
         }
     }
+
 
 }
 

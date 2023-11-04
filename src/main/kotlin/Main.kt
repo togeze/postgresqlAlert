@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.*
 
 
 fun main() {
@@ -32,5 +33,41 @@ fun main() {
 
     var bot = PostgreSQLAlertBot(isConnected, connection).createBot()
     bot.startPolling()
+    alert(15) {
+        checkBd(connection, bot)
+    }
 
+}
+ fun alert(interval: Long, task: () -> Unit) {
+    val timer = Timer()
+    val timerTask = object : TimerTask() {
+        override fun run() {
+            task.invoke()
+        }
+    }
+    timer.scheduleAtFixedRate(timerTask, 0, interval)
+}
+
+fun checkBd(connection: Connection?, bot: Bot) {
+    if (connection != null) {
+//        val query = "SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction'"
+//        val statement = connection.createStatement()
+//        val resultSet = statement.executeQuery(query)
+//
+//        val listActivites = mutableListOf<String>()
+//        var str: String = "Ошибок не найдено"
+//        if (resultSet.next()) {
+//
+//            val eresultSet = resultSet.getString("query")
+//            str = "Ошибка: $eresultSet"
+//        }
+//        listActivites.add(str)
+//        resultSet.close()
+//        statement.close()
+//        bot.sendMessage(
+//            chatId = ChatId.fromId(),
+//            text = "inline buttons",
+//            replyMarkup = inlineKeyboardMarkup,
+//        )
+    }
 }
